@@ -1,0 +1,59 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "UserService.Infrastructure.Grpc";
+
+package user;
+
+service UserService {
+  rpc GetUser (GetUserRequest) returns (UserResponse);
+  rpc GetUserByEmail (GetUserByEmailRequest) returns (UserResponse);
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
+  rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
+  rpc ValidateUser (ValidateUserRequest) returns (ValidateUserResponse);
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
+}
+
+message UserResponse {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+}
+
+message ValidateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message ValidateUserResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+}
+

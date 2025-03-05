@@ -1,0 +1,126 @@
+services:
+  # RabbitMQ Service
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5672:5672"  # RabbitMQ AMQP port
+      - "15672:15672"  # RabbitMQ Management Console
+    networks:
+      - backend
+
+  # SQL Server Service
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: ${DEFAULT_CONNECTION_PASSWORD}
+    ports:
+      - "1433:1433"
+    networks:
+      - backend
+    volumes:
+      - sqlserver_data:/var/opt/mssql  # Volume for persistent data
+
+  # Keycloak Service with SQL Server Integration
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    restart: always
+    command: ["start-dev", "--verbose"]
+    environment:
+      KC_DB: mssql
+      KC_DB_URL_HOST: sqlserver
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: sa
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASS}
+      KC_DB_URL: ${KEYCLOAK_DB_CONNECTION}
+    ports:
+      - "8080:8080"  # Keycloak Admin console
+    depends_on:
+      - sqlserver  # Ensure SQL Server is up first
+    networks:
+      - backend
+
+  # NGINX Reverse Proxy Service
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/certificate.crt:/etc/nginx/ssl/certificate.crt:ro
+      - ./certs/private.key:/etc/nginx/ssl/private.key:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - backend
+    depends_on:
+      - user_service
+      - keycloak
+      - rabbitmq
+
+  # User Service API
+  user_service:
+    build:
+      context: .
+      dockerfile: UserService.Api/Dockerfile
+    container_name: user_service
+    restart: always
+    volumes:
+      - ${CERT_PATH}:/app/certificate.pfx:ro
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS}
+      - ConnectionStrings__DefaultConnection=${USERS_CONNECTION}
+      - Kestrel__Certificates__Default__Path=/app/certificate.pfx
+      - Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
+
+      # 🐇 Add RabbitMQ environment variables
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__UserName=user
+      - RabbitMQ__Password=password
+      - RabbitMQ__QueueName=user-created
+    ports:
+      - "8082:5000"
+      - "5001:5001"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    networks:
+      - backend
+
+  # Employee Service API
+  employee_service:
+    build:
+      context: .
+      dockerfile: EmployeeService.Api/Dockerfile
+    container_name: employee_service
+    restart: always
+    environment:
+      - ConnectionStrings__DefaultConnection=${EMPLOYEES_CONNECTION}
+    ports:
+      - "5002:5002"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    networks:
+      - backend
+
+# Networks configuration
+networks:
+  backend:
+    driver: bridge
+
+# Volumes configuration (persistent data storage for SQL Server)
+volumes:
+  sqlserver_data:
