@@ -43,6 +43,8 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASS}
       KC_DB_URL: ${KEYCLOAK_DB_CONNECTION}
+    volumes:
+      - keycloak_data:/opt/keycloak/data
     ports:
       - "8080:8080"  # Keycloak Admin console
     depends_on:
@@ -145,3 +147,4 @@ networks:
 # Volumes configuration
 volumes:
   sqlserver_data:
+  keycloak_data:

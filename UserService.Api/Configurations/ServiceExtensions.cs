@@ -49,6 +49,29 @@ public static class ServiceExtensions
                     ValidateLifetime = true,
                     RoleClaimType = ClaimTypes.Role
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var claimsIdentity = context.Principal?.Identity as ClaimsIdentity;
+                        if (claimsIdentity != null)
+                        {
+                            var realmRoles = context.Principal?.FindFirst("realm_access")?.Value;
+                            if (!string.IsNullOrEmpty(realmRoles))
+                            {
+                                var roles = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string[]>>(realmRoles);
+                                if (roles != null && roles.TryGetValue("roles", out var userRoles))
+                                {
+                                    foreach (var role in userRoles)
+                                    {
+                                        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
+                                    }
+                                }
+                            }
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         services
