@@ -37,13 +37,13 @@ public static class ServiceExtensions
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = "http://keycloak:8080/realms/microservices-realm";
+                options.Authority = "http://auth.m.erp.com/realms/microservices-realm";
                 options.Audience = "dotnet-client";
                 options.RequireHttpsMetadata = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = "http://keycloak:8080/realms/microservices-realm",
+                    ValidIssuer = "http://auth.m.erp.com/realms/microservices-realm",
                     ValidateAudience = true,
                     ValidAudiences = ["dotnet-client", "realm-management", "broker", "account"],
                     ValidateLifetime = true,
