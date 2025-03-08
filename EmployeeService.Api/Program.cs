@@ -1,4 +1,4 @@
-using EmployeeService.Application.Extensions;
+﻿using EmployeeService.Application.Extensions;
 using EmployeeService.Domain.Interfaces;
 using EmployeeService.Infrastructure.Consumers;
 using EmployeeService.Infrastructure.Grpc.Services;
@@ -11,7 +11,7 @@ using RabbitMQ.Client;
 
 namespace EmployeeService.Api;
 
-public static class Program
+public class Program
 {
     public static void Main(string[] args)
     {
@@ -128,6 +128,44 @@ public static class Program
         {
             app.UseSwagger();
             app.UseSwaggerUI();
+        }
+
+        // Apply pending EF Core migrations when the service starts
+        using (var scope = app.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            // Use a string instead of the type for logging category
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            var retryCount = 0;
+            const int maxRetries = 10;
+            const int retryDelaySeconds = 5;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    logger.LogInformation("Attempting to connect to the database and apply migrations...");
+                    var dbContext = services.GetRequiredService<EmployeeDbContext>();
+                    dbContext.Database.Migrate(); // Apply all pending migrations
+                    Console.WriteLine("✅ Migrations applied successfully.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    logger.LogWarning($"Attempt {retryCount}/{maxRetries} - Error applying migrations: {ex.Message}");
+
+                    if (retryCount >= maxRetries)
+                    {
+                        logger.LogError($"❌ Failed to apply migrations after {maxRetries} attempts: {ex.Message}");
+                        Console.WriteLine($"❌ Error applying migrations: {ex.Message}");
+                        break;
+                    }
+
+                    logger.LogInformation($"Waiting {retryDelaySeconds} seconds before next attempt...");
+                    Thread.Sleep(retryDelaySeconds * 1000);
+                }
+            }
         }
 
         // Middleware configuration

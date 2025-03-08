@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.EntityFrameworkCore;
 using UserService.Api.Configurations;
 using UserService.Infrastructure.Grpc.Services;
+using UserService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +32,44 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.ConfigureServices(builder.Configuration, builder.Host);
 
 var app = builder.Build();
+
+// Apply pending EF Core migrations when the service starts
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var retryCount = 0;
+    const int maxRetries = 10;
+    const int retryDelaySeconds = 5;
+
+    while (retryCount < maxRetries)
+    {
+        try
+        {
+            logger.LogInformation("Attempting to connect to the database and apply migrations...");
+            var dbContext = services.GetRequiredService<UserDbContext>();
+            dbContext.Database.Migrate(); // Apply all pending migrations
+            Console.WriteLine("✅ Migrations applied successfully.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            retryCount++;
+            logger.LogWarning($"Attempt {retryCount}/{maxRetries} - Error applying migrations: {ex.Message}");
+
+            if (retryCount >= maxRetries)
+            {
+                logger.LogError($"❌ Failed to apply migrations after {maxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"❌ Error applying migrations: {ex.Message}");
+                break;
+            }
+
+            logger.LogInformation($"Waiting {retryDelaySeconds} seconds before next attempt...");
+            Thread.Sleep(retryDelaySeconds * 1000);
+        }
+    }
+}
+
 
 if (app.Environment.IsDevelopment())
 {
