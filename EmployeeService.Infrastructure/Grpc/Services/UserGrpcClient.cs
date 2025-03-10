@@ -10,7 +10,7 @@ public class UserGrpcClient
 
     public UserGrpcClient()
     {
-        var channel = GrpcChannel.ForAddress("http://users.m.erp.com");
+        var channel = GrpcChannel.ForAddress("https://users.m.erp.com:443");
         _client = new UserService.UserServiceClient(channel);
     }
 
