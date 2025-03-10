@@ -1,16 +1,13 @@
-﻿using System.Security.Claims;
-using Keycloak.AuthServices.Authorization;
-using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using UserService.Application.Extensions;
+using UserService.Application.Users.Extensions;
 using UserService.Domain.Interfaces;
+using UserService.Infrastructure.Identity;
 using UserService.Infrastructure.Logging;
 using UserService.Infrastructure.Messaging;
 using UserService.Infrastructure.Persistence;
-using UserService.Infrastructure.Repositories;
+using UserService.Infrastructure.Persistence.Repositories;
 
 namespace UserService.Api.Configurations;
 
@@ -33,56 +30,8 @@ public static class ServiceExtensions
         });
 
         // 🔹 Authentication & Authorization
-        services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.Authority = "http://auth.m.erp.com/realms/microservices-realm";
-                options.Audience = "dotnet-client";
-                options.RequireHttpsMetadata = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = "http://auth.m.erp.com/realms/microservices-realm",
-                    ValidateAudience = true,
-                    ValidAudiences = ["dotnet-client", "realm-management", "broker", "account"],
-                    ValidateLifetime = true,
-                    RoleClaimType = ClaimTypes.Role
-                };
-                options.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = context =>
-                    {
-                        var claimsIdentity = context.Principal?.Identity as ClaimsIdentity;
-                        if (claimsIdentity != null)
-                        {
-                            var realmRoles = context.Principal?.FindFirst("realm_access")?.Value;
-                            if (!string.IsNullOrEmpty(realmRoles))
-                            {
-                                var roles = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string[]>>(realmRoles);
-                                if (roles != null && roles.TryGetValue("roles", out var userRoles))
-                                {
-                                    foreach (var role in userRoles)
-                                    {
-                                        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
-                                    }
-                                }
-                            }
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
-            });
-
-        services
-            .AddAuthorization()
-            .AddKeycloakAuthorization();
-
-        const string policyName = "RequireAdminRole";
-        const string adminRole = "hr-admin";
-
-        services.AddAuthorizationBuilder()
-            .AddPolicy(policyName, policy => policy.RequireRealmRoles(adminRole));
+        services.AddCustomAuthentication(configuration);
+        services.AddCustomAuthorization();
 
         // 🔹 Logging Configuration (Serilog)
         hostBuilder.AddSerilogConfiguration();
@@ -90,13 +39,12 @@ public static class ServiceExtensions
         // 🔹 Register Application Services
 
         // Add RabbitMQ connection as a singleton with configuration
-        services.AddSingleton<RabbitMqConnection>(sp =>
-            new RabbitMqConnection(
-                sp.GetRequiredService<ILogger<RabbitMqConnection>>(),
+        services.AddSingleton<IMessageBroker, RabbitMqMessageBroker>(sp =>
+            new RabbitMqMessageBroker(
+                sp.GetRequiredService<ILogger<RabbitMqMessageBroker>>(),
                 sp.GetRequiredService<IConfiguration>()
             )
         );
-
 
         services.AddApplicationServices();
         services.AddGrpc(options => options.EnableDetailedErrors = true);

@@ -2,9 +2,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using UserService.Application.Commands;
-using UserService.Application.Exceptions;
-using UserService.Application.Queries;
+using UserService.Application.Users.Commands;
+using UserService.Application.Users.Queries;
+using UserService.Domain.Exceptions;
 
 namespace UserService.Api.Controllers;
 

@@ -51,6 +51,8 @@ services:
       - sqlserver  # Ensure SQL Server is up first
     networks:
       - backend
+    extra_hosts:
+      - "auth.m.erp.com:172.18.0.4"
 
   # NGINX Reverse Proxy Service
   nginx:
@@ -94,10 +96,10 @@ services:
       - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
       - RabbitMQ__QueueName=user-created
 
-      # 🔑 Keycloak Authentication
-      - KEYCLOAK_AUTHORITY=${KEYCLOAK_AUTHORITY}
-      - KEYCLOAK_CLIENTID=${KEYCLOAK_CLIENTID}
-      - KEYCLOAK_CLIENTSECRET=${KEYCLOAK_CLIENTSECRET}
+      # # 🔑 Keycloak Authentication
+      - Keycloak_Authority=${KEYCLOAK_AUTHORITY}
+      - Keycloak_ClientId=${KEYCLOAK_CLIENTID}
+      - Keycloak_ClientSecret=${KEYCLOAK_CLIENTSECRET}
 
       # 📜 Serilog Log Path
       - USER_SERVICE_SERILOG_LOG_PATH=/app/logs/userservice-.log

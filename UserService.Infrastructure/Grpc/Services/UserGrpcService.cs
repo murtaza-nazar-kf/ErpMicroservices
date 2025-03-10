@@ -4,28 +4,37 @@ using UserService.Domain.Interfaces;
 
 namespace UserService.Infrastructure.Grpc.Services;
 
-public class UserGrpcService(IUserRepository userRepository) : UserService.UserServiceBase
+public class UserGrpcService : UserService.UserServiceBase
 {
-    public async Task<UserResponse> GetUserAsync(GetUserRequest request)
+    private readonly IUserRepository _userRepository;
+
+    public UserGrpcService(IUserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    public override async Task<UserResponse> GetUser(GetUserRequest request, ServerCallContext context)
     {
         if (!Guid.TryParse(request.Id, out var userId))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid ID format"));
 
-        var user = await userRepository.GetByIdAsync(userId).ConfigureAwait(false)
-                   ?? throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false);
+        if (user == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
 
         return MapToUserResponse(user);
     }
 
-    public async Task<UserResponse> GetUserByEmailAsync(GetUserByEmailRequest request)
+    public override async Task<UserResponse> GetUserByEmail(GetUserByEmailRequest request, ServerCallContext context)
     {
-        var user = await userRepository.GetByEmailAsync(request.Email).ConfigureAwait(false)
-                   ?? throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
+        var user = await _userRepository.GetByEmailAsync(request.Email).ConfigureAwait(false);
+        if (user == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
 
         return MapToUserResponse(user);
     }
 
-    public async Task<UserResponse> CreateUserAsync(CreateUserRequest request)
+    public override async Task<UserResponse> CreateUser(CreateUserRequest request, ServerCallContext context)
     {
         var user = new User
         {
@@ -34,41 +43,38 @@ public class UserGrpcService(IUserRepository userRepository) : UserService.UserS
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
         };
 
-        var createdUser = await userRepository.CreateAsync(user).ConfigureAwait(false);
+        var createdUser = await _userRepository.CreateAsync(user).ConfigureAwait(false);
         return MapToUserResponse(createdUser);
     }
 
-    public async Task<UserResponse> UpdateUserAsync(UpdateUserRequest request)
+    public override async Task<UserResponse> UpdateUser(UpdateUserRequest request, ServerCallContext context)
     {
         if (!Guid.TryParse(request.Id, out var userId))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid user ID format"));
 
-        var user = await userRepository.GetByIdAsync(userId).ConfigureAwait(false)
-                   ?? throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
+        var user = await _userRepository.GetByIdAsync(userId).ConfigureAwait(false);
+        if (user == null)
+            throw new RpcException(new Status(StatusCode.NotFound, "User not found"));
 
         user.Username = request.Username;
         user.Email = request.Email;
-
-        await userRepository.UpdateAsync(user).ConfigureAwait(false);
+        await _userRepository.UpdateAsync(user).ConfigureAwait(false);
 
         return MapToUserResponse(user);
     }
 
-    public async Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest request)
+    public override async Task<DeleteUserResponse> DeleteUser(DeleteUserRequest request, ServerCallContext context)
     {
         if (!Guid.TryParse(request.Id, out var userId))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid user ID format"));
 
-        await userRepository.DeleteAsync(userId).ConfigureAwait(false);
-
+        await _userRepository.DeleteAsync(userId).ConfigureAwait(false);
         return new DeleteUserResponse { Success = true };
     }
 
-    public async Task<ValidateUserResponse> ValidateUserAsync(ValidateUserRequest request)
+    public override async Task<ValidateUserResponse> ValidateUser(ValidateUserRequest request, ServerCallContext context)
     {
-        var (isValid, userId) =
-            await userRepository.ValidateUserAsync(request.Email, request.Password).ConfigureAwait(false);
-
+        var (isValid, userId) = await _userRepository.ValidateUserAsync(request.Email, request.Password).ConfigureAwait(false);
         return new ValidateUserResponse { IsValid = isValid, UserId = userId };
     }
 
