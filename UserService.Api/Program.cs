@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.EntityFrameworkCore;
 using UserService.Api.Configurations;
 using UserService.Infrastructure.Grpc.Services;
 using UserService.Infrastructure.Identity;
-using UserService.Infrastructure.Persistence;
+using UserService.Infrastructure.Persistence.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,42 +28,11 @@ builder.Services.ConfigureServices(builder.Configuration, builder.Host);
 
 var app = builder.Build();
 
-//// Apply pending EF Core migrations when the service starts
-//using (var scope = app.Services.CreateScope())
-//{
-//    var services = scope.ServiceProvider;
-//    var logger = services.GetRequiredService<ILogger<Program>>();
-//    var retryCount = 0;
-//    const int maxRetries = 10;
-//    const int retryDelaySeconds = 5;
-
-//    while (retryCount < maxRetries)
-//        try
-//        {
-//            logger.LogInformation("Attempting to connect to the database and apply migrations...");
-//            var dbContext = services.GetRequiredService<UserDbContext>();
-//            dbContext.Database.Migrate(); // Apply all pending migrations
-//            Console.WriteLine("✅ Migrations applied successfully.");
-//            break;
-//        }
-//        catch (Exception ex)
-//        {
-//            retryCount++;
-//            logger.LogWarning("Attempt {RetryCount}/{MaxRetries} - Error applying migrations: {ExMessage}", retryCount,
-//                maxRetries, ex.Message);
-
-//            if (retryCount >= maxRetries)
-//            {
-//                logger.LogError("Failed to apply migrations after {MaxRetries} attempts: {ExMessage}", maxRetries,
-//                    ex.Message);
-//                Console.WriteLine($"Error applying migrations: {ex.Message}");
-//                break;
-//            }
-
-//            logger.LogInformation("Waiting {RetryDelaySeconds} seconds before next attempt...", retryDelaySeconds);
-//            Thread.Sleep(retryDelaySeconds * 1000);
-//        }
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var migrationService = scope.ServiceProvider.GetRequiredService<MigrationService>();
+    await migrationService.StartAsync(CancellationToken.None).ConfigureAwait(false); // Ensure this is executed
+}
 
 if (app.Environment.IsDevelopment())
 {

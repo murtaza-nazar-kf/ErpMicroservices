@@ -4,6 +4,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using UserService.Infrastructure.Persistence.DbContexts;
 
 namespace UserService.Infrastructure.Persistence.Migrations
 {

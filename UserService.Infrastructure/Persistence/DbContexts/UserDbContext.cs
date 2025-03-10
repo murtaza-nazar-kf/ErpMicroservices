@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UserService.Domain.Entities;
 
-namespace UserService.Infrastructure.Persistence;
+namespace UserService.Infrastructure.Persistence.DbContexts;
 
 public class UserDbContext(DbContextOptions<UserDbContext> options) : DbContext(options)
 {

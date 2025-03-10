@@ -6,8 +6,9 @@ using UserService.Domain.Interfaces;
 using UserService.Infrastructure.Identity;
 using UserService.Infrastructure.Logging;
 using UserService.Infrastructure.Messaging;
-using UserService.Infrastructure.Persistence;
+using UserService.Infrastructure.Persistence.DbContexts;
 using UserService.Infrastructure.Persistence.Repositories;
+using UserService.Infrastructure.Persistence.Services;
 
 namespace UserService.Api.Configurations;
 
@@ -62,6 +63,8 @@ public static class ServiceExtensions
 
         services.AddFluentValidationRulesToSwagger();
         services.AddHttpContextAccessor();
+
+        services.AddScoped<MigrationService>();
     }
 
     private static void ConfigureSwagger(IServiceCollection services)
