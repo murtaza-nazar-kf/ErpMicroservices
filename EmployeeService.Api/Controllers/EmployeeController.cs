@@ -1,7 +1,6 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
+﻿using EmployeeService.Application.Employees.Commands;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using EmployeeService.Application.Commands;
 
 namespace EmployeeService.API.Controllers;
 

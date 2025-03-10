@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 
-namespace UserService.Infrastructure.Identity;
+namespace EmployeeService.Infrastructure.Identity;
 
 public class KeycloakJwtMiddleware(RequestDelegate next)
 {

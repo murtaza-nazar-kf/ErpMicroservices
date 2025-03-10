@@ -1,5 +1,7 @@
-﻿using Grpc.Net.Client;
-using EmployeeService.Infrastructure.Grpc.Protos; // Fixed namespace typo
+﻿using EmployeeService.Infrastructure.Grpc.Protos;
+using Grpc.Net.Client;
+
+// Fixed namespace typo
 namespace EmployeeService.Infrastructure.Grpc.Services;
 
 public class UserGrpcClient

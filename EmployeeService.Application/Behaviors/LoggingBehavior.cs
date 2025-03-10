@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
-using Serilog;
 
 namespace EmployeeService.Application.Behaviors;
 
@@ -18,7 +17,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TReque
 
         try
         {
-            Log.Information(
+            logger.LogInformation(
                 "Beginning request {RequestName} {UniqueId} {@Request}",
                 requestName,
                 uniqueId,
@@ -26,7 +25,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TReque
 
             var response = await next().ConfigureAwait(true);
 
-            Log.Information(
+            logger.LogInformation(
                 "Completed request {RequestName} {UniqueId} {@Response}",
                 requestName,
                 uniqueId,
@@ -36,7 +35,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TReque
         }
         catch (Exception ex)
         {
-            Log.Error(
+            logger.LogError(
                 ex,
                 "Request failed {RequestName} {UniqueId} {@Request}",
                 requestName,

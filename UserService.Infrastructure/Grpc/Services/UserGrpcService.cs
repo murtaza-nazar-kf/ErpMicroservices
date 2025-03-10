@@ -72,9 +72,11 @@ public class UserGrpcService : UserService.UserServiceBase
         return new DeleteUserResponse { Success = true };
     }
 
-    public override async Task<ValidateUserResponse> ValidateUser(ValidateUserRequest request, ServerCallContext context)
+    public override async Task<ValidateUserResponse> ValidateUser(ValidateUserRequest request,
+        ServerCallContext context)
     {
-        var (isValid, userId) = await _userRepository.ValidateUserAsync(request.Email, request.Password).ConfigureAwait(false);
+        var (isValid, userId) =
+            await _userRepository.ValidateUserAsync(request.Email, request.Password).ConfigureAwait(false);
         return new ValidateUserResponse { IsValid = isValid, UserId = userId };
     }
 

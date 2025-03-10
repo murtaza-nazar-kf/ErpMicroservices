@@ -1,9 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using EmployeeService.Infrastructure.Persistence.DbContexts;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using UserService.Infrastructure.Persistence.DbContexts;
 
-namespace UserService.Infrastructure.Persistence.Services;
+namespace EmployeeService.Infrastructure.Persistence.Services;
 
 public class MigrationService(ILogger<MigrationService> logger, IServiceProvider serviceProvider)
 {
@@ -56,7 +56,7 @@ public class MigrationService(ILogger<MigrationService> logger, IServiceProvider
     private async Task<bool> HasPendingMigrationsAsync(CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<EmployeeDbContext>();
         var pendingMigrations =
             await dbContext.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
         return pendingMigrations.Any();
@@ -65,7 +65,7 @@ public class MigrationService(ILogger<MigrationService> logger, IServiceProvider
     private async Task ApplyMigrationsAsync(CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<EmployeeDbContext>();
         await dbContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
