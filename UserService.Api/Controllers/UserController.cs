@@ -21,9 +21,9 @@ public class UserController(IMediator mediator, ILogger<UserController> logger) 
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var currentUsername = User.FindFirstValue(ClaimTypes.Name);
-            logger.LogInformation("User {Username} (ID: {UserId}) is creating a new user", currentUsername,
-                currentUserId);
-            var userId = await mediator.Send(command);
+            logger.LogInformation("User {Username} (ID: {UserId}) is creating a new user", currentUsername, currentUserId);
+
+            var userId = await mediator.Send(command).ConfigureAwait(false);
             return CreatedAtAction(nameof(GetUserById), new { id = userId }, userId);
         }
         catch (Exception ex)
@@ -37,28 +37,56 @@ public class UserController(IMediator mediator, ILogger<UserController> logger) 
     public async Task<IActionResult> GetUserById(Guid id)
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin")) return Forbid();
-        var user = await mediator.Send(new GetUserQuery(id));
-        return user is not null ? Ok(user) : NotFound();
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized("User is not authenticated.");
+
+        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin"))
+            return Forbid();
+
+        try
+        {
+            var user = await mediator.Send(new GetUserQuery(id)).ConfigureAwait(false);
+            return user != null ? Ok(user) : NotFound("User not found.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching user {UserId}", id);
+            return StatusCode(500, "An error occurred while retrieving the user.");
+        }
     }
 
     [HttpGet]
     [Authorize(Roles = "hr-admin")]
     public async Task<IActionResult> GetAllUsers()
     {
-        var users = await mediator.Send(new GetAllUsersQuery());
-        return Ok(users);
+        try
+        {
+            var users = await mediator.Send(new GetAllUsersQuery()).ConfigureAwait(false);
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching all users");
+            return StatusCode(500, "An error occurred while retrieving users.");
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserCommand command)
     {
-        if (id != command.Id) return BadRequest("Mismatched user ID");
+        if (id != command.Id)
+            return BadRequest("Mismatched user ID");
+
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin")) return Forbid();
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized("User is not authenticated.");
+
+        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin"))
+            return Forbid();
+
         try
         {
-            await mediator.Send(command);
+            await mediator.Send(command).ConfigureAwait(false);
             return NoContent();
         }
         catch (NotFoundException ex)
@@ -76,10 +104,15 @@ public class UserController(IMediator mediator, ILogger<UserController> logger) 
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin")) return Forbid();
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized("User is not authenticated.");
+
+        if (id.ToString() != currentUserId && !User.IsInRole("hr-admin"))
+            return Forbid();
+
         try
         {
-            await mediator.Send(new DeleteUserCommand(id));
+            await mediator.Send(new DeleteUserCommand(id)).ConfigureAwait(false);
             return NoContent();
         }
         catch (NotFoundException ex)
@@ -97,7 +130,8 @@ public class UserController(IMediator mediator, ILogger<UserController> logger) 
     [AllowAnonymous]
     public IActionResult GetCurrentUserInfo()
     {
-        if (!User.Identity.IsAuthenticated) return Ok(new { Message = "User not authenticated" });
+        if (User.Identity is not { IsAuthenticated: true })
+            return Ok(new { Message = "User not authenticated" });
 
         return Ok(new
         {
@@ -132,7 +166,6 @@ public class UserController(IMediator mediator, ILogger<UserController> logger) 
 
             Console.WriteLine("User is not Authenticated");
 
-            // Log the Authorization header to check if a token is being sent
             if (Request.Headers.ContainsKey("Authorization"))
             {
                 var token = Request.Headers["Authorization"].ToString();
