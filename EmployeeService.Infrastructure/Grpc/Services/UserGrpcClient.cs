@@ -17,6 +17,6 @@ public class UserGrpcClient
     public async Task<UserResponse> GetUserByIdAsync(Guid userId)
     {
         var request = new GetUserRequest { Id = userId.ToString() };
-        return await _client.GetUserByIdAsync(request);
+        return await _client.GetUserByIdAsync(request).ConfigureAwait(false);
     }
 }
